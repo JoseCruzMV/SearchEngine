@@ -19,15 +19,48 @@ fun getWords(fileLocation: String) {
     val file = File(fileLocation)
     val list = file.readLines()
     val listOfPeople = getData(peopleData = list)
-    getUserOption(listOfPeople = listOfPeople)
+    val peopleInvertedIndex = builtPeopleInvertedIndex(listOfPeople = listOfPeople)
+    getUserOption(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex)
+}
+
+/* It will create a map of with the position of each
+element occurs (name, lastname and email) */
+fun builtPeopleInvertedIndex(listOfPeople: MutableList<Person>): Map<String, MutableSet<Int>> {
+    val peopleInvertedIndex = mutableMapOf<String, MutableSet<Int>>()
+
+    for (i in listOfPeople.indices) {
+        if (listOfPeople[i].name.isNotEmpty()) { // If name is not an empty String
+            if (peopleInvertedIndex.containsKey(listOfPeople[i].name.lowercase())) { // if the name already exists in map
+                peopleInvertedIndex[listOfPeople[i].name.lowercase()]!!.add(i) // It will be sure of not return null and will add the index
+            } else { // if the name is new to the map
+                peopleInvertedIndex[listOfPeople[i].name.lowercase()] = mutableSetOf(i) // It adds de name and a new int list
+            }
+        }
+        if (listOfPeople[i].lastName.isNotEmpty()) {
+            if (peopleInvertedIndex.containsKey(listOfPeople[i].lastName.lowercase())) {
+                peopleInvertedIndex[listOfPeople[i].lastName.lowercase()]!!.add(i)
+            } else { // if the name is new to the map
+                peopleInvertedIndex[listOfPeople[i].lastName.lowercase()] = mutableSetOf(i)
+            }
+        }
+        if (listOfPeople[i].email.isNotEmpty()) {
+            if (peopleInvertedIndex.containsKey(listOfPeople[i].email.lowercase())) {
+                peopleInvertedIndex[listOfPeople[i].email.lowercase()]!!.add(i)
+            } else { // if the name is new to the map
+                peopleInvertedIndex[listOfPeople[i].email.lowercase()] = mutableSetOf(i)
+            }
+        }
+    }
+//    peopleInvertedIndex.forEach { println("${it.key} -> ${it.value.joinToString()}") }
+    return peopleInvertedIndex.toMap()
 }
 
 /* Asks user to choose an action */
-fun getUserOption(listOfPeople: MutableList<Person>) {
+fun getUserOption(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<String, MutableSet<Int>>) {
     while (true) {
         showMenu()
         when (readLine()!!.toIntOrNull()) {
-            FIND_PERSON -> findPerson(listOfPeople = listOfPeople)
+            FIND_PERSON -> findPerson(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex)
             PRINT_ALL_PEOPLE -> printAllPeople(listOfPeople = listOfPeople)
             EXIT -> {
                 println("\nBye!")
@@ -53,23 +86,13 @@ fun showMenu() {
     println("0. Exit")
 }
 
-/* Asks for the number of searches to the user */
-/*fun searchAction(listOfPeople: MutableList<Person>) {
-    println("\nEnter the number of search queries:")
-    var numberOfQueries = readLine()!!.toInt()
-    while (numberOfQueries > 0) {
-        findPerson(listOfPeople = listOfPeople)
-        numberOfQueries--
-    }
-}*/
-
 /* Look for given query in people list: searching by name, lastname or email */
-fun findPerson(listOfPeople: MutableList<Person>) {
+fun findPerson(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<String, MutableSet<Int>>) {
     var foundPerson = false
     var personFoundHeadline = true
-    println("\nEnter a name or email to search all suitable people.")
-    val query = readLine()!!
-    for (person in listOfPeople) {
+    println("\nEnter a name or email to search all matching people.")
+    val query = readLine()!!.lowercase()
+    /*for (person in listOfPeople) {
         if (person.name.contains(query, ignoreCase = true) || // if person name is similar to given query
             person.lastName.contains(query, ignoreCase = true) ||
             person.email.contains(query, ignoreCase = true)
@@ -81,25 +104,22 @@ fun findPerson(listOfPeople: MutableList<Person>) {
             person.printPerson()
             foundPerson = true
         }
+    }*/
+    if (peopleInvertedIndex.containsKey(query)) {
+        val peopleFound = peopleInvertedIndex[query]!!
+        println("${peopleFound.size} person" + if (peopleFound.size > 1) "s " else " ")
+        println("found:")
+        for (i in peopleFound) {
+            listOfPeople[i].printPerson()
+        }
+    } else {
+        println("No matching people found.")
     }
-    if (!foundPerson) println("No matching people found.")
 }
 
 /* Ask for user data */
 fun getData(peopleData: List<String>): MutableList<Person> {
     val listOfPeople = mutableListOf<Person>()
-    /*println("Enter the number of people:")
-    var dataSize = readLine()!!.toInt()
-    println("Enter all people: ")
-    while (dataSize > 0) {
-        val data = readLine()!!.split(" ")
-        when (data.size) { // Different constructors according to user data
-            1 -> listOfPeople.add(Person(name = data[0])) // only name
-            2 -> listOfPeople.add(Person(name = data[0], lastName = data[1])) // name and last name
-            else -> listOfPeople.add(Person(name = data[0], lastName = data[1], email = data[2])) // name, last name and email
-        }
-        dataSize--
-    }*/
 
     for (person in peopleData) {
         val data = person.split(" ")
