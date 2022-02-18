@@ -11,6 +11,10 @@ const val FIND_PERSON = 1
 const val PRINT_ALL_PEOPLE = 2
 const val EXIT = 0
 
+enum class SearchStrategies{
+    ALL, ANY, NONE
+}
+
 fun main(args: Array<String>) {
     getWords(fileLocation = args[1])
 }
@@ -60,7 +64,7 @@ fun getUserOption(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<St
     while (true) {
         showMenu()
         when (readLine()!!.toIntOrNull()) {
-            FIND_PERSON -> findPerson(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex)
+            FIND_PERSON -> setSearchStrategy(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex)
             PRINT_ALL_PEOPLE -> printAllPeople(listOfPeople = listOfPeople)
             EXIT -> {
                 println("\nBye!")
@@ -68,6 +72,17 @@ fun getUserOption(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<St
             }
             else -> println("Incorrect option! Try again.")
         }
+    }
+}
+
+/* Asks user for searching strategy and calls the find person method */
+fun setSearchStrategy(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<String, MutableSet<Int>>) {
+    println("Select a matching strategy: ALL, ANY, NONE")
+    when(val strategy = readLine()!!) {
+        SearchStrategies.ALL.name -> findPerson(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex, searchStrategy = strategy)
+        SearchStrategies.ANY.name -> findPerson(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex, searchStrategy = strategy)
+        SearchStrategies.NONE.name -> findPerson(listOfPeople = listOfPeople, peopleInvertedIndex = peopleInvertedIndex, searchStrategy = strategy)
+        else -> return
     }
 }
 
@@ -87,27 +102,58 @@ fun showMenu() {
 }
 
 /* Look for given query in people list: searching by name, lastname or email */
-fun findPerson(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<String, MutableSet<Int>>) {
-    var foundPerson = false
-    var personFoundHeadline = true
+fun findPerson(
+    listOfPeople: MutableList<Person>,
+    peopleInvertedIndex: Map<String, MutableSet<Int>>,
+    searchStrategy: String
+) {
     println("\nEnter a name or email to search all matching people.")
-    val query = readLine()!!.lowercase()
-    /*for (person in listOfPeople) {
-        if (person.name.contains(query, ignoreCase = true) || // if person name is similar to given query
-            person.lastName.contains(query, ignoreCase = true) ||
-            person.email.contains(query, ignoreCase = true)
-        ) {
-            if (personFoundHeadline) {
-                println("\nPeople found:")
-                personFoundHeadline = false
+    // Use lowercase to make insensitive case
+    val query = readLine()!!.split(" ").map { it.lowercase() }
+    val peopleFound = mutableSetOf<Int>()
+    var successfulSearch = true
+    var first = true
+    when(searchStrategy){
+        SearchStrategies.ALL.name -> {
+            for (element in query) {
+                if (peopleInvertedIndex.containsKey(element) && first) { // search the first term and creates a reference
+                    peopleFound.addAll(peopleInvertedIndex[element]!!)
+                    first = false
+                } else if (peopleInvertedIndex.containsKey(element)) { // search new terms after first
+                    val aux = mutableSetOf<Int>() // aux
+                    // add all the new terms that were not in the first search
+                    peopleFound.forEach { if (!peopleInvertedIndex[element]!!.contains(it)) aux.add(it) }
+                    peopleFound.removeAll(aux) // removes all the terms that appears only this search
+                } else {
+                    successfulSearch = false
+                    break
+                }
             }
-            person.printPerson()
-            foundPerson = true
         }
-    }*/
-    if (peopleInvertedIndex.containsKey(query)) {
-        val peopleFound = peopleInvertedIndex[query]!!
-        println("${peopleFound.size} person" + if (peopleFound.size > 1) "s " else " ")
+        SearchStrategies.ANY.name -> {
+            for (element in query) {
+                if (peopleInvertedIndex.containsKey(element)){
+                    peopleFound.addAll(peopleInvertedIndex[element]!!) // It will add all elements that match with query
+                }
+            }
+            if (peopleFound.size <= 0) successfulSearch = false // If there was no match the search is unsuccessful
+        }
+        SearchStrategies.NONE.name -> {
+            val aux = listOfPeople.indices.toMutableSet()   // set with all possible indices of people
+            for (element in query) {
+                if (peopleInvertedIndex.containsKey(element)) {
+                    successfulSearch = true
+                    aux.removeAll(peopleInvertedIndex[element]!!) // removes all the indices found
+                } else {
+                    successfulSearch = false
+                }
+            }
+            peopleFound.addAll(aux) // Gives peopleFound the indices not removed
+        }
+    }
+
+    if (successfulSearch) {
+        print("${peopleFound.size} person" + if (peopleFound.size > 1) "s " else " ")
         println("found:")
         for (i in peopleFound) {
             listOfPeople[i].printPerson()
@@ -116,6 +162,7 @@ fun findPerson(listOfPeople: MutableList<Person>, peopleInvertedIndex: Map<Strin
         println("No matching people found.")
     }
 }
+
 
 /* Ask for user data */
 fun getData(peopleData: List<String>): MutableList<Person> {
