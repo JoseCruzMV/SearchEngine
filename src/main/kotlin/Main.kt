@@ -1,3 +1,5 @@
+import java.io.File
+
 class Person (val name: String,
               val lastName: String = "",
               val email: String = "")
@@ -9,12 +11,14 @@ const val FIND_PERSON = 1
 const val PRINT_ALL_PEOPLE = 2
 const val EXIT = 0
 
-fun main() {
-    getWords()
+fun main(args: Array<String>) {
+    getWords(fileLocation = args[1])
 }
 
-fun getWords() {
-    val listOfPeople = getData()
+fun getWords(fileLocation: String) {
+    val file = File(fileLocation)
+    val list = file.readLines()
+    val listOfPeople = getData(peopleData = list)
     getUserOption(listOfPeople = listOfPeople)
 }
 
@@ -82,9 +86,9 @@ fun findPerson(listOfPeople: MutableList<Person>) {
 }
 
 /* Ask for user data */
-fun getData(): MutableList<Person> {
+fun getData(peopleData: List<String>): MutableList<Person> {
     val listOfPeople = mutableListOf<Person>()
-    println("Enter the number of people:")
+    /*println("Enter the number of people:")
     var dataSize = readLine()!!.toInt()
     println("Enter all people: ")
     while (dataSize > 0) {
@@ -95,7 +99,17 @@ fun getData(): MutableList<Person> {
             else -> listOfPeople.add(Person(name = data[0], lastName = data[1], email = data[2])) // name, last name and email
         }
         dataSize--
+    }*/
+
+    for (person in peopleData) {
+        val data = person.split(" ")
+        when (data.size) { // Different constructors according to user data
+            1 -> listOfPeople.add(Person(name = data[0])) // only name
+            2 -> listOfPeople.add(Person(name = data[0], lastName = data[1])) // name and last name
+            else -> listOfPeople.add(Person(name = data[0], lastName = data[1], email = data[2])) // name, last name and email
+        }
     }
     return listOfPeople
 }
+
 
